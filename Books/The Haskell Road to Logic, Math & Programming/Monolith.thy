@@ -14,3 +14,7 @@ lemma DensityOfRationals2:
   fixes a b :: rat
   obtains x where "a < x \<and> x < b"
 sorry
+
+lemma exercise_4_10:
+  shows "{a}={b} \<longleftrightarrow> a=b"
+sorry

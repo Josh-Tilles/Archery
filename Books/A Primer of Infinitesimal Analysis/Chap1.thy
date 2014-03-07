@@ -28,7 +28,234 @@ sublocale comm_monoid < monoid
   apply (rule comm_neutral)
 done
 
-locale SmoothWorld = monoid
+locale zero =
+  fixes zero :: 'a  ("0")
+
+locale one =
+  fixes one  :: 'a  ("1")
+
+locale plus =
+  fixes plus :: "'a \<Rightarrow> 'a \<Rightarrow> 'a"  (infixl "+" 65)
+
+locale minus =
+  fixes minus :: "'a \<Rightarrow> 'a \<Rightarrow> 'a" (infixl "-" 65)
+
+locale uminus =
+  fixes uminus :: "'a \<Rightarrow> 'a \<Rightarrow> 'a" ("- _" [81] 80)
+
+locale times =
+  fixes times :: "'a \<Rightarrow> 'a \<Rightarrow> 'a" (infixl "*" 70)
+
+locale semigroup_add = plus +
+  assumes add_assoc: "(a + b) + c = a + (b + c)"
+
+sublocale semigroup_add < add!: semigroup plus
+  by default (fact add_assoc)
+
+locale ab_semigroup_add = semigroup_add +
+  assumes add_commute: "a + b = b + a"
+
+sublocale ab_semigroup_add < add!: abel_semigroup plus
+  by default (fact add_commute)
+
+locale monoid_add = zero + semigroup_add +
+  assumes add_0_left: "0 + a = a"
+    and add_0_right: "a + 0 = a"
+
+sublocale monoid_add < add!: monoid plus 0
+  by default (fact add_0_left add_0_right)+
+
+lemma (in zero) zero_reorient: "0 = x \<longleftrightarrow> x = 0"
+by (rule eq_commute)
+
+locale comm_monoid_add = zero + ab_semigroup_add +
+  assumes add_0: "0 + a = a"
+
+sublocale comm_monoid_add < add!: comm_monoid plus 0
+  apply default
+  apply (subst add_commute)
+  apply (rule add_0)
+done
+
+sublocale comm_monoid_add < monoid_add
+  apply default
+  apply (rule add_0)
+  apply (subst add_commute)
+  apply (rule add_0)
+done
+
+locale comm_monoid_diff = comm_monoid_add + minus +
+  assumes diff_zero: "a - 0 = a"
+    and zero_diff: "0 - a = 0"
+    and add_diff_cancel_left: "(c + a) - (c + b) = a - b"
+    and diff_diff_add: "a - b - c = a - (b + c)"
+
+locale semigroup_mult = times +
+  assumes mult_assoc: "(a * b) * c = a * (b * c)"
+
+sublocale semigroup_mult < mult!: semigroup times
+  by default (fact mult_assoc)
+
+
+locale monoid_mult = one + semigroup_mult +
+  assumes mult_1_left: "1 * a  = a"
+    and mult_1_right: "a * 1 = a"
+
+sublocale monoid_mult < mult!: monoid times 1
+  by default (fact mult_1_left mult_1_right)+
+
+lemma (in monoid) one_reorient: "1 = x \<longleftrightarrow> x = 1"
+by (rule eq_commute)
+
+locale ab_semigroup_mult = semigroup_mult +
+  assumes mult_commute: "a * b = b * a"
+
+sublocale ab_semigroup_mult < mult!: abel_semigroup times
+  by default (fact mult_commute)
+
+locale comm_monoid_mult = one + ab_semigroup_mult +
+  assumes mult_1: "1 * a = a"
+
+sublocale comm_monoid_mult < mult!: comm_monoid times 1
+  apply default
+(*
+  apply (rule mult_commute)
+  WHY WON'T IT WORK??
+  ...
+  oh, right.
+*)
+  apply (subst mult_commute)
+  apply (rule mult_1)
+done
+
+sublocale comm_monoid_mult < monoid_mult
+  by default (fact mult.left_neutral mult.right_neutral)+
+
+locale cancel_semigroup_add = semigroup_add +
+  assumes add_left_imp_eq: "a + b = a + c \<Longrightarrow> b = c"
+  assumes add_right_imp_eq: "b + a = c + a \<Longrightarrow> b = c"
+
+locale cancel_ab_semigroup_add = ab_semigroup_add +
+  assumes add_imp_eq: "a + b = a + c \<Longrightarrow> b = c"
+begin
+  sublocale cancel_semigroup_add
+  proof
+    fix a b c :: 'a
+    assume "a + b = a + c" 
+    then show "b = c" by (rule add_imp_eq)
+  next
+    fix a b c :: 'a
+    assume "b + a = c + a"
+    then have "a + b = a + c"
+apply (simp only: add_commute)
+done
+    then show "b = c" by (rule add_imp_eq)
+  qed
+end
+
+
+locale cancel_comm_monoid_add = cancel_ab_semigroup_add + comm_monoid_add
+
+locale group_add = minus + uminus + monoid_add +
+  assumes left_minus (*[simp]*): "(- a) + a = 0"
+  assumes diff_minus: "a - b = a + (- b)"
+
+class ab_group_add = minus + uminus + comm_monoid_add +
+  assumes ab_left_minus: "- a + a = 0"
+  assumes ab_diff_minus: "a - b = a + (- b)"
+
+class ordered_ab_semigroup_add = order + ab_semigroup_add +
+  assumes add_left_mono: "a \<le> b \<Longrightarrow> c + a \<le> c + b"
+
+class ordered_cancel_ab_semigroup_add =
+  ordered_ab_semigroup_add + cancel_ab_semigroup_add
+
+class ordered_ab_semigroup_add_imp_le =
+  ordered_cancel_ab_semigroup_add +
+  assumes add_le_imp_le_left: "c + a \<le> c + b \<Longrightarrow> a \<le> b"
+
+class ordered_cancel_comm_monoid_diff = comm_monoid_diff + ordered_ab_semigroup_add_imp_le +
+  assumes le_iff_add: "a \<le> b \<longleftrightarrow> (\<exists>c. b = a + c)"
+
+subsection {* Support for reasoning about signs *}
+
+class ordered_comm_monoid_add =
+  ordered_cancel_ab_semigroup_add + comm_monoid_add
+
+class ordered_ab_group_add =
+  ab_group_add + ordered_ab_semigroup_add
+
+class linordered_ab_semigroup_add =
+  linorder + ordered_ab_semigroup_add
+
+class linordered_cancel_ab_semigroup_add =
+  linorder + ordered_cancel_ab_semigroup_add
+
+class linordered_ab_group_add = linorder + ordered_ab_group_add
+
+class abs =
+  fixes abs :: "'a \<Rightarrow> 'a"
+begin
+
+notation (xsymbols)
+  abs  ("\<bar>_\<bar>")
+
+notation (HTML output)
+  abs  ("\<bar>_\<bar>")
+
+end
+
+class sgn =
+  fixes sgn :: "'a \<Rightarrow> 'a"
+
+class abs_if = minus + uminus + ord + zero + abs +
+  assumes abs_if: "\<bar>a\<bar> = (if a < 0 then - a else a)"
+
+class sgn_if = minus + uminus + zero + one + ord + sgn +
+  assumes sgn_if: "sgn x = (if x = 0 then 0 else if 0 < x then 1 else - 1)"
+begin
+
+lemma sgn0 [simp]: "sgn 0 = 0"
+  by (simp add:sgn_if)
+
+end
+
+class ordered_ab_group_add_abs = ordered_ab_group_add + abs +
+  assumes abs_ge_zero [simp]: "\<bar>a\<bar> \<ge> 0"
+    and abs_ge_self: "a \<le> \<bar>a\<bar>"
+    and abs_leI: "a \<le> b \<Longrightarrow> - a \<le> b \<Longrightarrow> \<bar>a\<bar> \<le> b"
+    and abs_minus_cancel [simp]: "\<bar>-a\<bar> = \<bar>a\<bar>"
+    and abs_triangle_ineq: "\<bar>a + b\<bar> \<le> \<bar>a\<bar> + \<bar>b\<bar>"
+
+(* Rings *)
+class semiring = ab_semigroup_add + semigroup_mult +
+  assumes distrib_right[algebra_simps, field_simps]: "(a + b) * c = a * c + b * c"
+  assumes distrib_left[algebra_simps, field_simps]: "a * (b + c) = a * b + a * c"
+
+class mult_zero = times + zero +
+  assumes mult_zero_left [simp]: "0 * a = 0"
+  assumes mult_zero_right [simp]: "a * 0 = 0"
+
+class semiring_0 = semiring + comm_monoid_add + mult_zero
+
+class semiring_0_cancel = semiring + cancel_comm_monoid_add
+
+class comm_semiring = ab_semigroup_add + ab_semigroup_mult +
+  assumes distrib: "(a + b) * c = a * c + b * c"
+
+class comm_semiring_0 = comm_semiring + comm_monoid_add + mult_zero
+
+class comm_semiring_0_cancel = comm_semiring + cancel_comm_monoid_add
+
+class zero_neq_one = zero + one +
+  assumes zero_neq_one [simp]: "0 \<noteq> 1"
+
+class semiring_1 = zero_neq_one + semiring_0 + monoid_mult
+
+locale SmoothWorld =
+  assumes add_0_left: "0 + a = a"
+    and add_0_right: "a + 0 = a"
+  assumes add_0: "0 + a = a"
 
 (*
 - (- a) = a
@@ -298,6 +525,41 @@ class ordered_ab_group_add_abs = ordered_ab_group_add + abs +
     and abs_minus_cancel [simp]: "\<bar>-a\<bar> = \<bar>a\<bar>"
     and abs_triangle_ineq: "\<bar>a + b\<bar> \<le> \<bar>a\<bar> + \<bar>b\<bar>"
 
+class linordered_ab_semigroup_add =
+  linorder + ordered_ab_semigroup_add
+
+class linordered_cancel_ab_semigroup_add =
+  linorder + ordered_cancel_ab_semigroup_add
+begin
+
+subclass linordered_ab_semigroup_add ..
+
+subclass ordered_ab_semigroup_add_imp_le
+proof
+  fix a b c :: 'a
+  assume le: "c + a <= c + b"  
+  show "a <= b"
+  proof (rule ccontr)
+    assume w: "~ a \<le> b"
+    hence "b <= a" by (simp add: linorder_not_le)
+    hence le2: "c + b <= c + a" by (rule add_left_mono)
+    have "a = b" 
+      apply (insert le)
+      apply (insert le2)
+      apply (drule antisym, simp_all)
+      done
+    with w show False 
+      by (simp add: linorder_not_le [symmetric])
+  qed
+qed
+
+end
+
+class linordered_ab_group_add = linorder + ordered_ab_group_add
+begin
+
+subclass linordered_cancel_ab_semigroup_add ..
+
 (* Rings *)
 class semiring = ab_semigroup_add + semigroup_mult +
   assumes distrib_right[algebra_simps, field_simps]: "(a + b) * c = a * c + b * c"
@@ -476,4 +738,5 @@ a * (b + c) = a*b + a*c
 a \<noteq> 0 \<longrightarrow> a/a = 1 ( i.e., a * a^-1 = 1 )
 
 *)
-  
+
+

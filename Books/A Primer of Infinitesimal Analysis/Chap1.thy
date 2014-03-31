@@ -1,5 +1,5 @@
 theory Chap1
-imports HOL
+imports "~~/src/HOL/HOL"
 begin
 
 (* Groups *)
@@ -344,29 +344,92 @@ locale ordering =
     and trans: "a \<preceq> b \<Longrightarrow> b \<preceq> c \<Longrightarrow> a \<preceq> c"
 *)
 locale ordering =
-  fixes less :: "'a \<Rightarrow> 'a \<Rightarrow> bool" (infix "\<prec>" 50)
-  assumes trans: "\<lbrakk>a \<prec> b; b \<prec> c\<rbrakk> \<Longrightarrow> a \<prec> c"
-    and strict: "\<not>(a \<prec> a)"
+  fixes less :: "'a \<Rightarrow> 'a \<Rightarrow> bool" (infix "<" 50)
+  assumes trans: "\<lbrakk>a < b; b < c\<rbrakk> \<Longrightarrow> a < c"
+    and strict: "\<not>(a < a)"
 begin
-  definition less_eq :: "'a \<Rightarrow> 'a \<Rightarrow> bool" (infix "\<preceq>" 50) where
-    "a \<preceq> b \<longleftrightarrow> \<not>(b \<prec> a)"
-
-  notation
-    less_eq  ("op <=") and
-    less_eq  ("(_/ <= _)" [51, 51] 50) and
-    less  ("op <") and
-    less  ("(_/ < _)"  [51, 51] 50)
-  
-  notation (xsymbols)
-    less_eq  ("op \<le>") and
-    less_eq  ("(_/ \<le> _)"  [51, 51] 50)
+  definition less_eq :: "'a \<Rightarrow> 'a \<Rightarrow> bool" (infix "\<le>" 50) where
+    "a \<le> b \<longleftrightarrow> \<not>(b < a)"
 end
 
+(*
 locale linorder = ordering +
   assumes linear: "x \<le> y \<or> y \<le> x"
+*)
 
 locale ordered_ab_semigroup_add = ordering + ab_semigroup_add +
   assumes add_left_mono: "a < b \<Longrightarrow> a + c < b + c"
+
+locale experiment = ordered_ab_semigroup_add + field +
+  assumes 4: "\<lbrakk>a < b; 0 < c\<rbrakk> \<Longrightarrow> (a * c) < (b * c)"
+  assumes 5: "0 < a \<or> a < 1"
+  assumes 6: "a \<noteq> b \<Longrightarrow> a < b \<or> b < a"
+  assumes nn: "(- (- a)) = a"
+begin
+theorem exer1_1_a:
+  assumes "0 < a"
+  shows "a \<noteq> 0"
+proof (rule notI)
+  assume "a = 0"
+  hence "0 < 0" 
+apply (rule subst[where ?P="\<lambda>x. 0 < x"])
+apply (rule `0 < a`)
+done
+  moreover have "\<not>(0 < 0)" by (rule strict)
+  ultimately show False by iprover
+qed
+
+lemma "(- (- a)) = a"
+lemma "a + c < b + c \<Longrightarrow> a < b" sorry
+
+theorem exer1_1_b: "0 < a \<longleftrightarrow> -a < 0"
+proof (rule iffI)
+  assume "0 < a"
+  hence "0 + (-a) < a + (-a)" by (rule add_left_mono)
+  with left_minus have "0 + (-a) < 0" by (rule subst)
+  with add_0_left show "-a < 0" by (rule subst)
+next
+  assume "-a < 0"
+  hence "-a + a < 0 + a" by (rule add_left_mono)
+  with left_minus have "0 < 0 + a" by (rule subst)
+  with add_0_left show "0 < a" by (rule subst)
+qed
+
+corollary exer1_1_b': "0 < -a \<longleftrightarrow> a < 0"
+by (simp only: exer1_1_b nn)
+
+lemma zero_lt_one: "0 < 1" sorry
+
+lemma exer1_1_c: "0 < 1 + 1"
+proof -
+  from add_0 and zero_lt_one
+    have "0 < 0 + 1" by (rule forw_subst)
+  moreover from `0 < 1` have "0 + 1 < 1 + 1" by (rule add_left_mono)
+  ultimately show "0 < 1 + 1" by (rule trans)
+qed
+
+lemma exer1_1_d:
+  assumes "a < 0 \<or> 0 < a"
+  shows "0 < (a * a)"
+using assms
+proof (rule disjE)
+  assume "0 < a"
+  from this and this have "0 * a < a * a" by (rule 4)
+  thus "0 < a * a" by (subst sym[OF mult_zero_left])
+next
+  assume "a < 0"
+(* awkward *)
+hence "0 < -a" by (simp only: exer1_1_b')
+hence "0 * (-a) < (-a) * (-a)"
+using `0 < -a` by (rule 4)
+(* @TODO *)
+
+  with mult_zero_left have "0 < (-a) * (-a)" by (rule subst)
+  moreover have "(-a) * (-a) = a * a" sorry
+  ultimately show "0 < (a * a)" by (rule back_subst)
+qed
+
+lemma "n * n = (- n) * (- n)" oops
 
 locale ordered_cancel_ab_semigroup_add =
   ordered_ab_semigroup_add + cancel_ab_semigroup_add

@@ -11,38 +11,10 @@ begin
 
 subsection {* Definitions *}
 
-record ('o, 'a) category =
-  ob :: "'o set" ("Ob\<index>"  70)
-  ar :: "'a set" ("Ar\<index>"  70)
-  dom :: "'a \<Rightarrow> 'o" ("Dom\<index> _" [81] 70)
-  cod :: "'a \<Rightarrow> 'o" ("Cod\<index> _" [81] 70)
-  id :: "'o \<Rightarrow> 'a" ("Id\<index> _" [81] 80)
-  comp :: "'a \<Rightarrow> 'a \<Rightarrow> 'a"  (infixl "\<bullet>\<index>" 60)
-
 definition
   hom :: "[('o,'a,'m) category_scheme, 'o, 'o] \<Rightarrow> 'a set"
     ("Hom\<index> _ _" [81,81] 80) where
   "hom CC A B = { f. f\<in>ar CC & dom CC f = A & cod CC f = B }"
-
-locale category =
-  fixes CC (structure)
-  assumes dom_object [intro]:
-  "f \<in> Ar \<Longrightarrow> Dom f \<in> Ob"
-  and cod_object [intro]:
-  "f \<in> Ar \<Longrightarrow> Cod f \<in> Ob"
-  and id_left [simp]:
-  "f \<in> Ar \<Longrightarrow> Id (Cod f) \<bullet> f = f"
-  and id_right [simp]:
-  "f \<in> Ar \<Longrightarrow> f \<bullet> Id (Dom f) = f"
-  and id_hom [intro]:
-  "A \<in> Ob \<Longrightarrow> Id A \<in> Hom A A"
-  and comp_types [intro]:
-  "\<And>A B C. (comp CC) : (Hom B C) \<rightarrow> (Hom A B) \<rightarrow> (Hom A C)"
-  and comp_associative [simp]:
-  "f \<in> Ar \<Longrightarrow> g \<in> Ar \<Longrightarrow> h \<in> Ar
-  \<Longrightarrow> Cod h = Dom g \<Longrightarrow> Cod g = Dom f
-  \<Longrightarrow> f \<bullet> (g \<bullet> h) = (f \<bullet> g) \<bullet> h"
-
 
 subsection {* Lemmas *}
 

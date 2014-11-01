@@ -8,37 +8,12 @@ theory Category
 imports "~~/src/HOL/Library/FuncSet"
 begin
 
-record ('o,'m) Category = 
-  Obj :: "'o set" ("obj\<index>" 70) 
-  Mor :: "'m set" ("mor\<index>" 70)
-  Dom :: "'m \<Rightarrow> 'o" ("dom\<index> _" [80] 70)
-  Cod :: "'m \<Rightarrow> 'o" ("cod\<index> _" [80] 70)
-  Id  :: "'o \<Rightarrow> 'm" ("id\<index> _" [80] 75)
-  Comp :: "'m \<Rightarrow> 'm \<Rightarrow> 'm" (infixl ";;\<index>" 70)
-
-definition
-  MapsTo :: "('o,'m,'a) Category_scheme \<Rightarrow> 'm \<Rightarrow> 'o \<Rightarrow> 'o \<Rightarrow> bool" ("_ maps\<index> _ to _" [60, 60, 60] 65) where
-  "MapsTo CC f X Y \<equiv> f \<in> Mor CC \<and> Dom CC f = X \<and> Cod CC f = Y"
-
-definition
-  CompDefined :: "('o,'m,'a) Category_scheme \<Rightarrow> 'm \<Rightarrow> 'm \<Rightarrow> bool" (infixl "\<approx>>\<index>" 65) where
-  "CompDefined CC f g \<equiv> f \<in> Mor CC \<and> g \<in> Mor CC \<and> Cod CC f = Dom CC g"
-
 locale ExtCategory = 
   fixes C :: "('o,'m,'a) Category_scheme" (structure)
   assumes CdomExt: "(Dom C) \<in> extensional (Mor C)"
   and     CcodExt: "(Cod C) \<in> extensional (Mor C)"
   and     CidExt:  "(Id C) \<in> extensional (Obj C)"
   and     CcompExt:  "(split (Comp C)) \<in> extensional ({(f,g) | f g . f \<approx>> g})"
-
-locale Category = ExtCategory +
-  assumes Cdom : "f \<in> mor \<Longrightarrow> dom f \<in> obj"
-  and     Ccod : "f \<in> mor \<Longrightarrow> cod f \<in> obj"
-  and     Cidm [dest]: "X \<in> obj \<Longrightarrow> (id X) maps X to X"
-  and     Cidl : "f \<in> mor \<Longrightarrow> id (dom f) ;; f = f"
-  and     Cidr : "f \<in> mor \<Longrightarrow> f ;; id (cod f) = f"
-  and     Cassoc : "\<lbrakk>f \<approx>> g ; g \<approx>> h\<rbrakk> \<Longrightarrow> (f ;; g) ;; h = f ;; (g ;; h)"
-  and     Ccompt : "\<lbrakk>f maps X to Y ; g maps Y to Z\<rbrakk> \<Longrightarrow> (f ;; g) maps X to Z"
 
 definition 
   MakeCat :: "('o,'m,'a) Category_scheme \<Rightarrow> ('o,'m,'a) Category_scheme" where
